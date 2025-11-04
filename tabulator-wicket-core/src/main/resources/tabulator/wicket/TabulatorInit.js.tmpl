@@ -1,0 +1,23 @@
+const ${tableVarName} = new Tabulator("#${markupId}", {
+  layout: "fitColumns",
+  selectable: true,
+  ajaxURL: "/api/modelo/notas-por-periodo",
+  columns: [
+    {title: "ID", field: "id"},
+    {title: "Nome", field: "nome"},
+    {title: "Valor", field: "valor"}
+  ]
+});
+
+table.on("rowSelectionChanged", (data, rows) => {
+  const ids = data.map(r => r.id);
+  Wicket.Ajax.post({u: "${callbackUrl}&event=selectionChanged", ep: {ids: JSON.stringify(ids)}});
+});
+
+table.on("rowClick", (e, row) => {
+  Wicket.Ajax.post({u: "${callbackUrl}&event=rowClick", ep: {data: JSON.stringify(row.getData())}});
+});
+
+table.on("rowContext", (e, row) => {
+  Wicket.Ajax.post({u: "${callbackUrl}&event=rowContext", ep: {data: JSON.stringify(row.getData())}});
+});
