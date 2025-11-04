@@ -215,4 +215,11 @@
 	
 	</build>
 
+	<name>tabulator-wicket</name>
+	<url>https://github.com/nvolpini/tabulator-wicket</url>
+	<description>Tabulator integration for wicket parent POM</description>
+	<issueManagement>
+		<url>https://github.com/nvolpini/tabulator-wicket/issues</url>
+	</issueManagement>
+	
 </project>
