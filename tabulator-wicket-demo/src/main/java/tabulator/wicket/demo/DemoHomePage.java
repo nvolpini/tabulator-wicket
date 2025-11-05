@@ -14,6 +14,7 @@ import tabulator.wicket.TableRowData;
 import tabulator.wicket.TabulatorBehavior;
 import tabulator.wicket.TabulatorPanel;
 import tabulator.wicket.TabulatorTemplateInitializer;
+import tabulator.wicket.TabulatorTheme;
 import tabulator.wicket.TabulatorUtils;
 import tabulator.wicket.behavior.SelectionSubmitBehavior;
 import tabulator.wicket.events.DataLoadedEvent;
@@ -41,6 +42,8 @@ public class DemoHomePage extends WebPage {
 				new TabulatorTemplateInitializer(DemoHomePage.class, "DemoHomePageInit.js.tpl", Map.of()));
 		table.add(behavior);
 
+		//behavior.theme(TabulatorTheme.MIDNIGHT);
+		
 		behavior.add(new DataLoadedEvent() {
 			@Override
 			protected void onTableEvent(AjaxRequestTarget target, List<Map<String, Object>> data) {

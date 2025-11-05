@@ -15,8 +15,8 @@ public class TabulatorStringInitializer implements ITabulatorInitializer {
 		
 		return StringUtils.replaceEach(js
 			, new String[] {
-				"${markupId}"
-				,"${tableVarName}"
+				"__markupId__"
+				,"__tableVarName__"
 				}
 			, new String[] {
 				component.getMarkupId()

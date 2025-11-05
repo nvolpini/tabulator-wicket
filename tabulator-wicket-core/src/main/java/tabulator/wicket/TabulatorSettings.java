@@ -16,9 +16,13 @@ public class TabulatorSettings implements ITabulatorSettings {
 	
 	String tranlationLang;
 	
+	TabulatorTheme theme;
+	
 	private String cdnJs = "https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js";
 	private String cdnCss = "https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css";
 
+	private String cdnThemeCss;
+	
 	WebjarsSettings webjarsSettings = new WebjarsSettings();
 
 	private boolean useCdn;
@@ -96,5 +100,24 @@ public class TabulatorSettings implements ITabulatorSettings {
 	//@Override
 	public void setCdnBaseUrl(String cdnBaseUrl) {
 		webjarsSettings.cdnUrl(cdnBaseUrl);
+	}
+
+	public TabulatorTheme theme() {
+		return theme;
+	}
+
+	public ITabulatorSettings theme(TabulatorTheme theme) {
+		this.theme = theme;
+		return this;
+	}
+
+	@Override
+	public String getCdnThemeCss() {
+		return cdnThemeCss;
+	}
+
+	@Override
+	public void setCdnThemeCss(String cdnThemeCss) {
+		this.cdnThemeCss = cdnThemeCss;
 	}
 }

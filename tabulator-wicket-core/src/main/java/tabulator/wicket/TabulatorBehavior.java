@@ -2,6 +2,7 @@ package tabulator.wicket;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -10,12 +11,14 @@ import org.apache.wicket.markup.head.CssHeaderItem;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.head.JavaScriptHeaderItem;
 import org.apache.wicket.markup.head.OnDomReadyHeaderItem;
+import org.apache.wicket.model.IDetachable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import tabulator.wicket.behavior.AbstractTabulatorAjaxBehavior;
 import tabulator.wicket.resources.TabulatorCssReference;
 import tabulator.wicket.resources.TabulatorJsReference;
+import tabulator.wicket.resources.TabulatorThemeReference;
 
 public class TabulatorBehavior extends Behavior {
 
@@ -27,7 +30,8 @@ public class TabulatorBehavior extends Behavior {
 
     private final List<AbstractTabulatorAjaxBehavior> behaviors = new ArrayList<>();
     
-    
+    private TabulatorTheme themeOverride;
+
 
     private String tableVarName;
     
@@ -72,6 +76,16 @@ public class TabulatorBehavior extends Behavior {
         super.unbind(component);
         this.boundComponent = null;
     }
+    
+    @Override
+    public void detach(Component component) {
+    	super.detach(component);
+    	
+    	if (initializer instanceof IDetachable) {
+    		((IDetachable) initializer).detach();
+    	}
+    	
+    }
 
     @Override
     public final void renderHead(Component c, IHeaderResponse r){
@@ -108,13 +122,22 @@ public class TabulatorBehavior extends Behavior {
     protected void renderHeadResources(Component c, IHeaderResponse r) {
 
         ITabulatorSettings settings = TabulatorWicketPlugin.settings();
-		
+
+        TabulatorTheme theme = themeOverride != null ? themeOverride : settings.theme();
+
+        
 		if(settings.isUseCdn()){
 		    r.render(CssHeaderItem.forUrl(settings.getCdnCss()));
 		    r.render(JavaScriptHeaderItem.forUrl(settings.getCdnJs()));
+		    Optional.ofNullable(settings.getCdnThemeCss()).ifPresent(
+		    		css->r.render(CssHeaderItem.forUrl(css))
+		    		);
+		    
 		} else {
 			  r.render(CssHeaderItem.forReference(TabulatorCssReference.getWebjars()));
 		      r.render(JavaScriptHeaderItem.forReference(TabulatorJsReference.getWebjars()));
+		      Optional.ofNullable(theme).ifPresent(t->r.render(CssHeaderItem.forReference(TabulatorThemeReference.forTheme(t))));
+		      
 		}
 		/**
 		  r.render(CssHeaderItem.forReference(TabulatorCssReference.getWebjars()));
@@ -125,6 +148,11 @@ public class TabulatorBehavior extends Behavior {
     public final String getTableVarName() {
     	return tableVarName;
     }
+
+	public TabulatorBehavior theme(TabulatorTheme theme) {
+	    this.themeOverride = theme;
+	    return this;
+	}
 
     public void reload(AjaxRequestTarget target) {
     	

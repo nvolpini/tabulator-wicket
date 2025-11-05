@@ -1,4 +1,4 @@
-const ${tableVarName} = new Tabulator("#${markupId}", {
+const __tableVarName__ = new Tabulator("#__markupId__", {
   layout: "fitColumns",
   selectableRows: true,
   ajaxURL: "/api/demo1",

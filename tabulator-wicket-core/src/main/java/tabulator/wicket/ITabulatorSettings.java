@@ -27,4 +27,10 @@ public interface ITabulatorSettings {
 	
 	String getCdnBaseUrl();*/
 
+	 TabulatorTheme theme();
+	 ITabulatorSettings theme(TabulatorTheme theme);
+
+	 void setCdnThemeCss(String cdnThemeCss);
+
+	 String getCdnThemeCss();
 }
