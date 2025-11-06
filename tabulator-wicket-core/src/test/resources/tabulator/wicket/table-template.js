@@ -1,6 +1,7 @@
 const __tableVarName__ = new Tabulator("#__markupId__", {
 	layout: "fitColumns",
 	selectableRows: true,
+	ajaxURL: "__url__",
 	pagination: true,
 	paginationSize:30,
 	columnDefaults:{

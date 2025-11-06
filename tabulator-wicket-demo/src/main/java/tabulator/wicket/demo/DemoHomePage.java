@@ -1,6 +1,7 @@
 package tabulator.wicket.demo;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,6 +10,7 @@ import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.panel.FeedbackPanel;
+import org.apache.wicket.model.LoadableDetachableModel;
 import org.apache.wicket.model.util.MapModel;
 
 import tabulator.wicket.TableRowData;
@@ -38,10 +40,12 @@ public class DemoHomePage extends WebPage {
 
 		final TabulatorBehavior behavior = new TabulatorBehavior(
 				new TabulatorTemplateInitializerModel(DemoHomePage.class, "DemoHomePageInit.js.tpl"
-						, new MapModel<String, Object>()));
+				,new VarsModel())
+				);
 		table.add(behavior);
 
 		behavior.options().addColumnDefault("headerSort", true);
+		behavior.options().addColumnDefault("tooltip", true);
 		
 		//behavior.theme(TabulatorTheme.MIDNIGHT);
 		
@@ -131,5 +135,19 @@ public class DemoHomePage extends WebPage {
 			}
 		});
 
+	}
+	
+	class VarsModel extends LoadableDetachableModel<Map<String, Object>> {
+
+		@Override
+		protected Map<String, Object> load() {
+			
+			HashMap<String, Object> m = new HashMap<>();
+			
+			m.put("url", "/api/demo1");
+			
+			return m;
+		}
+		
 	}
 }

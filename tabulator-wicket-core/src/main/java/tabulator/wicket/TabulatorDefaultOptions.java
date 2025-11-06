@@ -14,6 +14,7 @@ public class TabulatorDefaultOptions implements Serializable {
 
     private transient ObjectMapper mapper;
     private transient ObjectNode root;
+    private String serializedJson;
 
     public TabulatorDefaultOptions() {
         initTransientFields();
@@ -34,12 +35,24 @@ public class TabulatorDefaultOptions implements Serializable {
         }
     }
 
+    private void writeObject(java.io.ObjectOutputStream out) throws IOException {
+        if (root != null) {
+            serializedJson = root.toString(); // armazena conteúdo textual
+        }
+        out.defaultWriteObject();
+    }
+
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         initTransientFields();
-    }
 
+        if (serializedJson != null) {
+            root = (ObjectNode) mapper.readTree(serializedJson);
+        } else {
+            root = mapper.createObjectNode();
+        }
+    }
     // region --- Generic setters ---
     public TabulatorDefaultOptions set(String key, String value) {
         asJson().put(key, value);

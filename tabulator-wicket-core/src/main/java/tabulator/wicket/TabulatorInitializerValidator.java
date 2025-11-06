@@ -24,33 +24,70 @@ public class TabulatorInitializerValidator {
     public TabulatorInitializerValidator(ValidationMode mode) {
         this.mode = mode;
     }
+	/*
+	public ObjectNode validateAndExtract(Component component, ITabulatorInitializer initializer) {
+	    return initializer.getRawContent().map(content -> {
+	        try {
+	            return extractAndParseJson(content);
+	        } catch (Exception e) {
+	            String msg = "Erro parseando JSON do initializer " + initializer.getClass().getSimpleName();
+	            if (mode == ValidationMode.STRICT)
+	                throw new TabulatorWicketException(msg, e);
+	            log.warn("{} — ignorando erro: {}", msg, e.getMessage());
+	            return mapper.createObjectNode();
+	        }
+	    }).orElse(mapper.createObjectNode());
+	}*/
     
-    public ObjectNode validateAndExtract(Component component, ITabulatorInitializer initializer) {
-        return initializer.getRawContent().map(content -> {
-            try {
-                return extractAndParseJson(content);
-            } catch (Exception e) {
-                String msg = "Erro parseando JSON do initializer " + initializer.getClass().getSimpleName();
-                if (mode == ValidationMode.STRICT)
-                    throw new TabulatorWicketException(msg, e);
-                log.warn("{} — ignorando erro: {}", msg, e.getMessage());
-                return mapper.createObjectNode();
-            }
-        }).orElse(mapper.createObjectNode());
-    }
-
-    private ObjectNode extractAndParseJson(String rawJs) throws IOException {
-        int open = rawJs.indexOf('{');
-        int close = rawJs.lastIndexOf('}');
-
-        if (open < 0 || close < 0 || close <= open) {
-            // Nenhum JSON detectado — retorna objeto vazio
+    public ObjectNode extractAndParseFromRenderedString(String rendered) {
+        // Finds the first '{' and last '}', extracts substring, sanitizes and parse.
+        int open = rendered.indexOf('{');
+        int close = rendered.lastIndexOf('}');
+        if (open < 0 || close <= open) {
             return mapper.createObjectNode();
         }
 
-        String jsonText = rawJs.substring(open, close + 1);
+        String jsonText = rendered.substring(open, close + 1);
+        // reusar a sanitização robusta que já discutimos: remove // comments,
+        // remove trailing commas, quote keys, etc.
+        String sanitized = sanitizeJsObjectToJson(jsonText);
+        try {
+            return (ObjectNode) mapper.readTree(sanitized);
+        } catch (IOException e) {
+            if (mode == ValidationMode.STRICT) {
+                throw new TabulatorWicketException("Erro parseando JSON do initializer", e);
+            } else {
+                log.error("Erro parseando template (lenient): {}; sanitized:\n{}", e.getMessage(), sanitized);
+                return mapper.createObjectNode();
+            }
+        }
+    }
 
-        // --- SANITIZAÇÃO ---
+	/*
+	private ObjectNode extractAndParseJson(String rawJs) throws IOException {
+	    int open = rawJs.indexOf('{');
+	    int close = rawJs.lastIndexOf('}');
+	
+	    if (open < 0 || close < 0 || close <= open) {
+	        // Nenhum JSON detectado — retorna objeto vazio
+	        return mapper.createObjectNode();
+	    }
+	
+	    String jsonText = rawJs.substring(open, close + 1);
+	
+	    String sanitized = sanitizeJsObjectToJson(jsonText);
+	
+	    // Tenta converter em JSON
+	    try {
+	        return (ObjectNode) mapper.readTree(sanitized);
+	    } catch (Exception e) {
+	        throw new IOException("Erro convertendo objeto JS para JSON: " + e.getMessage() + "\nTexto sanitizado:\n" + sanitized, e);
+	
+	    }
+	}
+	*/
+	private String sanitizeJsObjectToJson(String jsonText) {
+		// --- SANITIZAÇÃO ---
         String sanitized = jsonText
             // Remove comentários JS
             .replaceAll("(?m)//.*?$", "")
@@ -62,14 +99,7 @@ public class TabulatorInitializerValidator {
             .replaceAll("(?m)^\\s*$", "")
             // Remove múltiplos espaços
             .replaceAll("\\s{2,}", " ");
-
-        // Tenta converter em JSON
-        try {
-            return (ObjectNode) mapper.readTree(sanitized);
-        } catch (Exception e) {
-            throw new IOException("Erro convertendo objeto JS para JSON: " + e.getMessage() + "\nTexto sanitizado:\n" + sanitized, e);
-
-        }
-    }
+		return sanitized;
+	}
 
 }

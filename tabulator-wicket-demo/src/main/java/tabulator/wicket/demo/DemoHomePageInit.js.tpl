@@ -1,7 +1,7 @@
 const __tableVarName__ = new Tabulator("#__markupId__", {
   layout: "fitColumns",
   selectableRows: true,
-  ajaxURL: "/api/demo1",
+  ajaxURL: "__url__",
   columns: [
     {title: "ID", field: "id"},
     {title: "Nome", field: "nome"},

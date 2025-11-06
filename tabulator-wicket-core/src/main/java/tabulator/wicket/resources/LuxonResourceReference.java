@@ -7,7 +7,7 @@ public class LuxonResourceReference extends WebjarsJavaScriptResourceReference {
 	private static final LuxonResourceReference INSTANCE = new LuxonResourceReference();
 
 	private LuxonResourceReference() {
-		super("luxon/3.7.1/luxon.min.js");
+		super("luxon/3.7.1/build/global/luxon.js");
 	}
 
 	public static LuxonResourceReference get() {

@@ -87,11 +87,6 @@ public class TabulatorBehavior extends Behavior {
             }
         }
         
-        if (useDefaults && TabulatorWicketPlugin.settings().isApplyDefaultOptions()) {
-            mergeDefaultOptions();
-        }
-        
-        injectTranslations();
 
     }
 
@@ -149,31 +144,35 @@ public class TabulatorBehavior extends Behavior {
         // script principal
         String tableVar = getTableVarName();
 
+        prepareFinalOptions();
+        
+        // Renders the template - resolve as variáveis
+        String renderedTemplate = initializer.generateScript(c, getTableVarName());
 
-        // 1️⃣ Extrai as opções do template
+
         var validator = new TabulatorInitializerValidator(validationMode);
-        ObjectNode templateOptions = validator.validateAndExtract(c, initializer);
+        
+        // Extract json options from the parsed template
+        ObjectNode templateOptions = validator.extractAndParseFromRenderedString(renderedTemplate);
 
-        // 2️⃣ Faz o merge (template + defaults + behavior)
+        
+        //ObjectNode templateOptions = validator.validateAndExtract(c, initializer);
+
+        
+        // merge (template options + settings defaults + behavior/local options)
         ObjectNode merged = mergeOptions(templateOptions, getFinalOptions());
 
-        // 3️⃣ Monta o JS final, substituindo placeholders fixos
-        String js = initializer.generateScript(c, tableVar)
-            .replace("__markupId__", c.getMarkupId())
-            .replace("__tableVarName__", tableVar);
+        String finalScript = replaceTabulatorOptions(renderedTemplate, merged.toPrettyString());
 
-
-        // 4️⃣ Substitui o objeto de configuração dentro do script
-        js = replaceTabulatorOptions(js, merged.toPrettyString());
-
-        // 5️⃣ Adiciona event scripts
+        
+        // add the events
         for (AbstractTabulatorAjaxBehavior ev : behaviors) {
-            js += ev.createEventScript(tableVar);
+        	finalScript += ev.createEventScript(tableVar);
         }
 
-        r.render(OnDomReadyHeaderItem.forScript(js));
+        r.render(OnDomReadyHeaderItem.forScript(finalScript));
         
-        
+        //renders all the head resources
         renderHeadResources(c, r);
         
         
@@ -189,10 +188,12 @@ public class TabulatorBehavior extends Behavior {
 		
 		r.render(OnDomReadyHeaderItem.forScript(js.toString()));
 		*/
+        
+        //callback
         onRenderHead(c, r);
     }
     
-    private String replaceTabulatorOptions(String script, String jsonOptions) {
+    public String replaceTabulatorOptions(String script, String jsonOptions) {
         int start = script.indexOf('{');
         int end = script.lastIndexOf('}');
         if (start < 0 || end <= start) return script;
@@ -224,6 +225,13 @@ public class TabulatorBehavior extends Behavior {
     }
 
 
+    private void prepareFinalOptions() {
+	    if (useDefaults && TabulatorWicketPlugin.settings().isApplyDefaultOptions()) {
+	        mergeDefaultOptions();
+	    }
+	    injectTranslations();
+	}
+
     public ObjectNode getFinalOptions() {
         // inclui defaults, locale e opções locais
         ObjectNode node = options.asJson();
@@ -237,7 +245,7 @@ public class TabulatorBehavior extends Behavior {
 
 	/**
      * Renders head resources (JS and CSS) according to ITabulatorSettings.
-     * <br>Is it possible to override and provide custom resources
+     * <br>The add 'extra' resources, use {@link #onRenderHead(Component, IHeaderResponse)}
      * @param c
      * @param r
      */

@@ -2,13 +2,16 @@ package tabulator.wicket;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.model.util.MapModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -34,29 +37,29 @@ public class TabulatorInitializerValidatorTest extends AbstractWicketTest {
 
     @Test
     void testValidTemplateIsParsed() {
-        ITabulatorInitializer init = new TabulatorStringInitializer(rawTemplate);
+        //ITabulatorInitializer init = new TabulatorStringInitializer(rawTemplate);
         var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
 
-        ObjectNode node = validator.validateAndExtract(dummy, init);
+        ObjectNode node = validator.extractAndParseFromRenderedString(rawTemplate);
         assertTrue(node.has("columns"));
         assertTrue(node.get("pagination").asBoolean());
     }
 
     @Test
     void testInvalidTemplateLenientDoesNotThrow() {
-        ITabulatorInitializer init = new TabulatorStringInitializer("const t = new Tabulator('#id',{ invalid, });");
+        //ITabulatorInitializer init = new TabulatorStringInitializer("const t = new Tabulator('#id',{ invalid, });");
         var validator = new TabulatorInitializerValidator(ValidationMode.LENIENT);
 
-        assertDoesNotThrow(() -> validator.validateAndExtract(dummy, init));
+        assertDoesNotThrow(() -> validator.extractAndParseFromRenderedString(rawTemplate));
     }
 
     @Test
     void testInvalidTemplateStrictThrows() {
-        ITabulatorInitializer init = new TabulatorStringInitializer("const t = new Tabulator('#id',{ invalid, });");
+        //ITabulatorInitializer init = new TabulatorStringInitializer("const t = new Tabulator('#id',{ invalid, });");
         var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
 
         assertThrows(TabulatorWicketException.class,
-            () -> validator.validateAndExtract(dummy, init));
+            () -> validator.extractAndParseFromRenderedString("const t = new Tabulator('#id',{ invalid, });"));
     }
     
     @Test
@@ -76,5 +79,26 @@ public class TabulatorInitializerValidatorTest extends AbstractWicketTest {
         assertEquals(50, finalOpts.get("paginationSize").asInt());
         assertEquals("\"center\"", finalOpts.get("columnDefaults").get("hozAlign").toString());
     }
+    
+    @Test
+    void testTemplateVariableIsInterpolatedAndMerged() {
+        
+        ITabulatorInitializer init = new TabulatorTemplateInitializerModel(TabulatorInitializerValidatorTest.class
+        		, "table-template.js", new MapModel<>(Map.of("url", "/api/test")));
 
+        TabulatorBehavior behavior = new TabulatorBehavior(init);
+        behavior.options().addColumnDefault("headerSort", true);
+        
+        var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
+
+        // Simula bind+renderHead: obtém renderedTemplate, extract, merge, finalScript
+        String rendered = init.generateScript(dummy, "table1");
+        ObjectNode templateOpts = validator.extractAndParseFromRenderedString(rendered);
+        ObjectNode merged = behavior.mergeOptions(templateOpts, behavior.getFinalOptions());
+        String finalScript = behavior.replaceTabulatorOptions(rendered, merged.toPrettyString());
+
+        assertFalse(finalScript.contains("__url__"));
+        assertTrue(finalScript.contains("/api/test")); // valor interpolado
+        assertTrue(finalScript.contains("\"headerSort\"")); // vindo do merged columnDefaults
+    }
 }
