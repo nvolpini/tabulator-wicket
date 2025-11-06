@@ -1,22 +1,12 @@
 package tabulator.wicket;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Optional;
-
 import org.apache.wicket.Application;
 import org.apache.wicket.MetaDataKey;
 import org.apache.wicket.protocol.http.WebApplication;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import de.agilecoders.wicket.webjars.WicketWebjars;
-import de.agilecoders.wicket.webjars.settings.WebjarsSettings;
-import tabulator.wicket.lang.Translations;
 
 public class TabulatorWicketPlugin {
 	
@@ -72,7 +62,7 @@ public class TabulatorWicketPlugin {
 
 	        WicketWebjars.install((WebApplication)app, settings.getWebjarsSettings());
 
-			loadTranslation(settings);
+			//loadTranslation(settings);
 
 			log.info("initialize TabulatorWicketPlugin with given settings: {}", settings);
 		}
@@ -131,33 +121,58 @@ public class TabulatorWicketPlugin {
 		throw new IllegalStateException("there is no active application assigned to this thread.");
 	}
 
-	public static Optional<JsonNode> getTranslation(String lang) {
-
+	/*public static Optional<JsonNode> getTranslation(String locale) {
+	    String fileName = "tabulator/wicket/lang/" + locale + ".json";
+	
+	    ClassLoader classLoader = Translations.class.getClassLoader();
+	    
+	    try (InputStream in = classLoader.getResourceAsStream(fileName)) {
+	        if (in == null) {
+	            log.warn("Translation not found: {}", fileName);
+	            return Optional.empty();
+	        }
+	
+	        ObjectMapper mapper = new ObjectMapper();
+	        JsonNode root = mapper.readTree(in);
+	        ObjectNode wrapper = mapper.createObjectNode();
+	        wrapper.set(locale, root);
+	
+	        log.debug("Loaded translation: {}", fileName);
+	        return Optional.of(wrapper);
+	
+	    } catch (IOException e) {
+	        log.error("Error loading translation for locale {}", locale, e);
+	        return Optional.empty();
+	    }
+	}
+	
+	public static Optional<JsonNode> getTranslationx(String lang) {
+	
 		final String fileName = "tabulator/wicket/lang/"+lang + ".json";
 		
 		ClassLoader classLoader = Translations.class.getClassLoader();
 		InputStream inputStream = classLoader.getResourceAsStream(fileName);
-
+	
 		if (inputStream == null) {
 			log.error("No translation file found: {}", fileName);
 			return Optional.empty();
 		}
-
+	
 		ObjectMapper mapper = new ObjectMapper();
-
+	
 		JsonNode rootNode;
-
+	
 		try {
-
+	
 			rootNode = mapper.readValue(inputStream, JsonNode.class);
-
+	
 			ObjectNode langNode = mapper.createObjectNode();
 			langNode.set(lang, rootNode);
-
+	
 			//log.trace("json: {}", mapper.writeValueAsString(langNode));
-
+	
 			log.debug("translation '{}' loaded from: {}", lang, fileName);
-
+	
 			return Optional.ofNullable(langNode);
 			
 		} catch (Exception e) {
@@ -175,8 +190,8 @@ public class TabulatorWicketPlugin {
 	}
 	
 	private static void loadTranslation(ITabulatorSettings settings) {
-		/*
-		settings.getTranslation().ifPresent(lang -> {
+		
+		settings.getDefaultLocale().ifPresent(lang -> {
 			
 			getTranslation(lang).ifPresent(node->{
 				settings.getDefaultOptions().putCustom("langs", node);
@@ -185,8 +200,8 @@ public class TabulatorWicketPlugin {
 			
 			
 			
-		});*/
+		});
 		
-
-	}
+	
+	}*/
 }

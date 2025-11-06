@@ -33,6 +33,10 @@
 			<artifactId>tabulator-tables</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.webjars.npm</groupId>
+			<artifactId>luxon</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>org.apache.wicket</groupId>

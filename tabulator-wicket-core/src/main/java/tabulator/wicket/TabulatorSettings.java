@@ -1,6 +1,18 @@
 package tabulator.wicket;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import de.agilecoders.wicket.webjars.settings.WebjarsSettings;
 import tabulator.wicket.json.ObjectMapperFactory;
@@ -12,10 +24,14 @@ import tabulator.wicket.json.SingletonObjectMapperFactory;
  */
 public class TabulatorSettings implements ITabulatorSettings {
 
+	private static final Logger log = LoggerFactory.getLogger(TabulatorSettings.class);
+	
 	private ObjectMapperFactory objectMapperFactory;
 	
-	String tranlationLang;
-	
+	String defaultLocale;
+
+	private final Map<String, JsonNode> translations = new ConcurrentHashMap<>();
+
 	TabulatorTheme theme;
 	
 	private String cdnJs = "https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js";
@@ -26,25 +42,59 @@ public class TabulatorSettings implements ITabulatorSettings {
 	WebjarsSettings webjarsSettings = new WebjarsSettings();
 
 	private boolean useCdn;
-	
+
+	private boolean luxonEnabled = true; // padrão
+	private boolean useLuxonCdn = false;
+	private String luxonCdnUrl = "https://cdn.jsdelivr.net/npm/luxon@3.7.1/build/global/luxon.min.js";
+
+    private final TabulatorDefaultOptions defaultOptions = new TabulatorDefaultOptions();
+
+
+    private boolean applyDefaultOptions = true;
+
+    private final ObjectMapper mapper = new ObjectMapper();
+
 	public TabulatorSettings() {
 		this.objectMapperFactory = new SingletonObjectMapperFactory();
 		webjarsSettings.useCdnResources(false);
+
 	}
 	
-	public ITabulatorSettings setTranslation(String locale) {
-		this.tranlationLang = locale;
-		return this;
-	}
-	
-	
-	public Optional<String> getTranslation() {
-		return Optional.ofNullable(tranlationLang);
-	}
-	
-	// ------------------------------------------------------------
-	// CDN
-	// ------------------------------------------------------------
+
+    @Override
+    public Optional<JsonNode> getTranslation(String locale) {
+        if (translations.containsKey(locale)) {
+            return Optional.of(translations.get(locale));
+        }
+
+        String file = "tabulator/wicket/lang/" + locale + ".json";
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(file)) {
+            if (in == null) {
+                log.warn("Translation not found: {}", file);
+                return Optional.empty();
+            }
+            JsonNode json = mapper.readTree(in);
+            ObjectNode wrapped = mapper.createObjectNode();
+            wrapped.set(locale, json);
+            translations.put(locale, wrapped);
+            log.debug("Loaded translation for locale: {}", locale);
+            return Optional.of(wrapped);
+        } catch (IOException e) {
+            log.error("Error loading translation {}", locale, e);
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public void registerTranslation(String locale, JsonNode json) {
+        translations.put(locale, json);
+    }
+
+    @Override
+    public Map<String, JsonNode> getRegisteredTranslations() {
+        return Collections.unmodifiableMap(translations);
+    }
+
 	@Override
 	public boolean isUseCdn() {
 		return this.useCdn; 
@@ -119,5 +169,62 @@ public class TabulatorSettings implements ITabulatorSettings {
 	@Override
 	public void setCdnThemeCss(String cdnThemeCss) {
 		this.cdnThemeCss = cdnThemeCss;
+	}
+
+	@Override
+	public boolean isLuxonEnabled() {
+		return luxonEnabled;
+	}
+
+	@Override
+	public void setLuxonEnabled(boolean luxonEnabled) {
+		this.luxonEnabled = luxonEnabled;
+	}
+
+	@Override
+	public boolean isUseLuxonCdn() {
+		return useLuxonCdn;
+	}
+
+	@Override
+	public void setUseLuxonCdn(boolean useLuxonCdn) {
+		this.useLuxonCdn = useLuxonCdn;
+	}
+
+	@Override
+	public String getLuxonCdnUrl() {
+		return luxonCdnUrl;
+	}
+
+	@Override
+	public void setLuxonCdnUrl(String luxonCdnUrl) {
+		this.luxonCdnUrl = luxonCdnUrl;
+	}
+
+	@Override
+	public ITabulatorSettings setDefaultLocale(String locale) {
+		this.defaultLocale = locale;
+		return this;
+	}
+	
+	@Override
+	public Optional<String> getDefaultLocale() {
+		return Optional.ofNullable(defaultLocale);
+	}
+
+    @Override
+    public TabulatorDefaultOptions getDefaultOptions() {
+        return defaultOptions;
+    }
+
+	@Override
+	public boolean isApplyDefaultOptions() {
+		return applyDefaultOptions;
+	}
+
+
+	@Override
+	public void setApplyDefaultOptions(boolean applyDefaultOptions) {
+		this.applyDefaultOptions = applyDefaultOptions;
 	}
 }

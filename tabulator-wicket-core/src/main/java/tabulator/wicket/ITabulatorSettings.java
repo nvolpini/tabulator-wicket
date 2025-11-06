@@ -1,5 +1,10 @@
 package tabulator.wicket;
 
+import java.util.Map;
+import java.util.Optional;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
 import de.agilecoders.wicket.webjars.settings.WebjarsSettings;
 import tabulator.wicket.json.ObjectMapperFactory;
 
@@ -10,14 +15,14 @@ public interface ITabulatorSettings {
 	void setUseCdn(boolean useCdn);
 
 	boolean isUseCdn();
-	
-		void setCdnCss(String cdnCss);
-	
-		String getCdnCss();
-	
-		void setCdnJs(String cdnJs);
-	
-		String getCdnJs();
+
+	void setCdnCss(String cdnCss);
+
+	String getCdnCss();
+
+	void setCdnJs(String cdnJs);
+
+	String getCdnJs();
 
 	WebjarsSettings getWebjarsSettings();
 
@@ -27,10 +32,44 @@ public interface ITabulatorSettings {
 	
 	String getCdnBaseUrl();*/
 
-	 TabulatorTheme theme();
-	 ITabulatorSettings theme(TabulatorTheme theme);
+	TabulatorTheme theme();
 
-	 void setCdnThemeCss(String cdnThemeCss);
+	ITabulatorSettings theme(TabulatorTheme theme);
 
-	 String getCdnThemeCss();
+	void setCdnThemeCss(String cdnThemeCss);
+
+	String getCdnThemeCss();
+
+	void setLuxonCdnUrl(String luxonCdnUrl);
+
+	String getLuxonCdnUrl();
+
+	void setUseLuxonCdn(boolean useLuxonCdn);
+
+	boolean isUseLuxonCdn();
+
+	void setLuxonEnabled(boolean luxonEnabled);
+
+	boolean isLuxonEnabled();
+
+	void setApplyDefaultOptions(boolean applyDefaultOptions);
+
+	boolean isApplyDefaultOptions();
+
+	Optional<String> getDefaultLocale();
+
+	TabulatorDefaultOptions getDefaultOptions();
+
+	Optional<JsonNode> getTranslation(String locale);
+
+	/**
+	 * Adiciona ou registra manualmente uma tradução (útil para apps multi-tenant).
+	 */
+	void registerTranslation(String locale, JsonNode json);
+
+	/** Retorna todas as traduções registradas (cache interno). */
+	Map<String, JsonNode> getRegisteredTranslations();
+
+	ITabulatorSettings setDefaultLocale(String locale);
+
 }

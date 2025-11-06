@@ -49,4 +49,9 @@ public abstract class AbstractTabulatorTemplateInitializer implements ITabulator
 			variablesModel.detach();
 		}
 	}
+	
+	@Override
+	public Optional<String> getRawContent() {
+		return Optional.ofNullable(loadTemplate());
+	}
 }

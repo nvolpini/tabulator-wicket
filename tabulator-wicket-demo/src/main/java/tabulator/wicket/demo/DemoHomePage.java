@@ -9,13 +9,11 @@ import org.apache.wicket.ajax.markup.html.AjaxLink;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.panel.FeedbackPanel;
+import org.apache.wicket.model.util.MapModel;
 
 import tabulator.wicket.TableRowData;
 import tabulator.wicket.TabulatorBehavior;
-import tabulator.wicket.TabulatorPanel;
-import tabulator.wicket.TabulatorTemplateInitializer;
-import tabulator.wicket.TabulatorTheme;
-import tabulator.wicket.TabulatorUtils;
+import tabulator.wicket.TabulatorTemplateInitializerModel;
 import tabulator.wicket.behavior.SelectionSubmitBehavior;
 import tabulator.wicket.events.DataLoadedEvent;
 import tabulator.wicket.events.RowClickEvent;
@@ -39,9 +37,12 @@ public class DemoHomePage extends WebPage {
 		add(table);
 
 		final TabulatorBehavior behavior = new TabulatorBehavior(
-				new TabulatorTemplateInitializer(DemoHomePage.class, "DemoHomePageInit.js.tpl", Map.of()));
+				new TabulatorTemplateInitializerModel(DemoHomePage.class, "DemoHomePageInit.js.tpl"
+						, new MapModel<String, Object>()));
 		table.add(behavior);
 
+		behavior.options().addColumnDefault("headerSort", true);
+		
 		//behavior.theme(TabulatorTheme.MIDNIGHT);
 		
 		behavior.add(new DataLoadedEvent() {

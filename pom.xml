@@ -19,8 +19,11 @@
 		<wicket.version>10.6.0</wicket.version>
 
 		<jackson.version>2.18.0</jackson.version>
+		
 		<webjars.tabulator.version>6.3.1</webjars.tabulator.version>
+		<webjars.luxon.version>3.7.1</webjars.luxon.version>
 		<wicket-webjars.version>4.0.0</wicket-webjars.version>
+		
 		<jetty.version>11.0.24</jetty.version>
 		<junit.version>5.13.3</junit.version>
 
@@ -51,11 +54,11 @@
 				<artifactId>wicket-native-websocket-javax</artifactId>
 				<version>${wicket.version}</version>
 			</dependency>
-			
+
 			<dependency>
-			    <groupId>com.fasterxml.jackson.core</groupId>
-			    <artifactId>jackson-databind</artifactId>
-			    <version>${jackson.version}</version>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson.version}</version>
 			</dependency>
 
 			<dependency>
@@ -63,17 +66,25 @@
 				<artifactId>wicket-extensions</artifactId>
 				<version>${wicket.version}</version>
 			</dependency>
-			
+
+			<!-- webjars -->
+
+			<dependency>
+				<groupId>de.agilecoders.wicket.webjars</groupId>
+				<artifactId>wicket-webjars</artifactId>
+				<version>${wicket-webjars.version}</version>
+			</dependency>
+
 			<dependency>
 				<groupId>org.webjars.npm</groupId>
 				<artifactId>tabulator-tables</artifactId>
 				<version>${webjars.tabulator.version}</version>
 			</dependency>
-		
+
 			<dependency>
-			  <groupId>de.agilecoders.wicket.webjars</groupId>
-			  <artifactId>wicket-webjars</artifactId>
-			  <version>${wicket-webjars.version}</version>
+				<groupId>org.webjars.npm</groupId>
+				<artifactId>luxon</artifactId>
+				<version>${webjars.luxon.version}</version>
 			</dependency>
 
 
@@ -181,11 +192,11 @@
 	</dependencyManagement>
 
 	<build>
-	
+
 		<pluginManagement>
-			
+
 			<plugins>
-	
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-source-plugin</artifactId>
@@ -203,16 +214,16 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.14.1</version>
 				</plugin>
-	
+
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-eclipse-plugin</artifactId>
 					<version>2.10</version>
 				</plugin>
 			</plugins>
-			
+
 		</pluginManagement>
-	
+
 	</build>
 
 	<name>tabulator-wicket</name>
@@ -221,5 +232,5 @@
 	<issueManagement>
 		<url>https://github.com/nvolpini/tabulator-wicket/issues</url>
 	</issueManagement>
-	
+
 </project>

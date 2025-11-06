@@ -1,5 +1,7 @@
 package tabulator.wicket;
 
+import java.util.Optional;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.wicket.Component;
 
@@ -24,5 +26,10 @@ public class TabulatorStringInitializer implements ITabulatorInitializer {
 				}
 		);
 		
+	}
+	
+	@Override
+	public Optional<String> getRawContent() {
+		return Optional.ofNullable(js);
 	}
 }

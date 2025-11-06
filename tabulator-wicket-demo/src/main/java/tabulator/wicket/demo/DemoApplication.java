@@ -26,6 +26,10 @@ public class DemoApplication extends WebApplication {
         //settings.setCdnJs("https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js");
         //settings.setCdnCss("https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css");
         settings.setUseCdn(false);
+        
+        settings.setLuxonEnabled(true);
+        
+        settings.setDefaultLocale("pt-BR");
         	
 		TabulatorWicketPlugin.install(this, settings);
         

@@ -1,6 +1,7 @@
 package tabulator.wicket;
 
 import org.apache.wicket.markup.html.WebMarkupContainer;
+import org.apache.wicket.model.util.MapModel;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 
@@ -10,10 +11,11 @@ public class TabulatorTemplateInitializerTest extends AbstractWicketTest {
 
     @Test
     void testTemplateSubstitutionWorks() {
-        ITabulatorInitializer initializer = new TabulatorTemplateInitializer(
+        ITabulatorInitializer initializer = new TabulatorTemplateInitializerModel(
                 TabulatorTemplateInitializerTest.class,
                 "dummy-template.js.tmpl",
-                Map.of("extra", "ok")
+                new MapModel<String, Object>(
+                Map.of("extra", "ok"))
         );
 
         WebMarkupContainer c = new WebMarkupContainer("table");

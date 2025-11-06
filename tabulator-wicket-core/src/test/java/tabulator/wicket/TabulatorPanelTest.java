@@ -1,21 +1,14 @@
 package tabulator.wicket;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.util.resource.IResourceStream;
-import org.apache.wicket.util.resource.StringBufferResourceStream;
 import org.apache.wicket.util.resource.StringResourceStream;
 import org.apache.wicket.util.tester.WicketTester;
 import org.junit.jupiter.api.Test;
-
-import tabulator.wicket.TabulatorPanel;
-import tabulator.wicket.TabulatorSettings;
-import tabulator.wicket.TabulatorTemplateInitializer;
-
-import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TabulatorPanelTest {
 
