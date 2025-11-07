@@ -28,8 +28,4 @@ public class TabulatorStringInitializer implements ITabulatorInitializer {
 		
 	}
 	
-	@Override
-	public Optional<String> getRawContent() {
-		return Optional.ofNullable(js);
-	}
 }

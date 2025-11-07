@@ -50,8 +50,4 @@ public abstract class AbstractTabulatorTemplateInitializer implements ITabulator
 		}
 	}
 	
-	@Override
-	public Optional<String> getRawContent() {
-		return Optional.ofNullable(loadTemplate());
-	}
 }

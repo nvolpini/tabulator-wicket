@@ -186,7 +186,20 @@
 				<artifactId>commons-lang3</artifactId>
 				<version>3.17.0</version>
 			</dependency>
-
+			
+			<!--	
+			<dependency>
+				<groupId>com.github.cliftonlabs</groupId>
+				<artifactId>json-simple</artifactId>
+				<version>4.0.1</version>
+			</dependency>
+			-->
+			<dependency>
+				<groupId>org.hjson</groupId>
+				<artifactId>hjson</artifactId>
+				<version>3.1.0</version>
+			</dependency>
+			
 		</dependencies>
 
 	</dependencyManagement>

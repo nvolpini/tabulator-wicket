@@ -52,6 +52,11 @@ public class TabulatorBehavior extends Behavior {
     
     private final TabulatorDefaultOptions options = new TabulatorDefaultOptions();
 
+    private final List<TableFunction> runOnInitFunctions = new ArrayList<>();
+
+    private final List<TableFunction> runOnTableBuiltFunctions = new ArrayList<>();
+
+    
     public TabulatorBehavior(ITabulatorInitializer initializer) {
         this.initializer = Objects.requireNonNull(initializer);
 
@@ -86,8 +91,12 @@ public class TabulatorBehavior extends Behavior {
                 component.add(ev);
             }
         }
-        
 
+		getLocale().ifPresent(lang->{
+			addRunOnTableBuilt(TabulatorUtils.locale(lang));
+		});
+		
+        
     }
 
     private void mergeDefaultOptions() {
@@ -112,6 +121,9 @@ public class TabulatorBehavior extends Behavior {
                     // merge adicional (caso já exista)
                     ((ObjectNode) options.asJson().get("langs")).setAll((ObjectNode) json);
                 }
+        		
+        		//addRunOnTableInit(TabulatorUtils.locale(lang));
+        		
                 options.set("lang", lang); //TODO isso nao existe no tabulator
                 
             });
@@ -162,15 +174,51 @@ public class TabulatorBehavior extends Behavior {
         // merge (template options + settings defaults + behavior/local options)
         ObjectNode merged = mergeOptions(templateOptions, getFinalOptions());
 
-        String finalScript = replaceTabulatorOptions(renderedTemplate, merged.toPrettyString());
+        // Serializa e restaura as funções JS
+        String mergedJson = merged.toPrettyString();
+        mergedJson = validator.restoreFunctions(mergedJson);
+        
+        String finalScript = replaceTabulatorOptions(renderedTemplate, mergedJson);
 
+        StringBuilder sb = new StringBuilder(finalScript);
         
         // add the events
         for (AbstractTabulatorAjaxBehavior ev : behaviors) {
-        	finalScript += ev.createEventScript(tableVar);
+        	sb.append(ev.createEventScript(tableVar));
+        	sb.append("\n");
         }
 
-        r.render(OnDomReadyHeaderItem.forScript(finalScript));
+        sb.append("\n");
+        
+		/*
+		getLocale().ifPresent(lang->{
+			sb.append(String.format("%s.setLocale(\"%s\");\n", tableVar, lang));
+		});
+		
+		sb.append("table.on('tableBuilt', function() {\n");
+		for (TableFunction fn : runOnInitFunctions) {
+		    sb.append("    ").append(fn.getFunctionBody("table")).append(";\n");
+		}
+		sb.append("});\n");*/
+
+		
+		if (!runOnTableBuiltFunctions.isEmpty()) {
+			sb.append(tableVar);
+			sb.append(".on('tableBuilt', function() {\n");
+		    for (TableFunction fn : runOnTableBuiltFunctions) {
+		        sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+		    }
+		    sb.append("});\n");
+		}
+        
+		for (TableFunction fn : runOnInitFunctions) {
+			sb.append(fn.getFunctionBody(tableVar));
+			sb.append("\n");
+		}
+        
+		
+		
+        r.render(OnDomReadyHeaderItem.forScript(sb.toString()));
         
         //renders all the head resources
         renderHeadResources(c, r);
@@ -355,4 +403,16 @@ public class TabulatorBehavior extends Behavior {
         this.validationMode = mode;
         return this;
     }
+
+	public TabulatorBehavior addRunOnTableInit(TableFunction fn) {
+	    runOnInitFunctions.add(fn);
+	    return this;
+	}
+	
+
+	public TabulatorBehavior addRunOnTableBuilt(TableFunction fn) {
+	    runOnTableBuiltFunctions.add(fn);
+	    return this;
+	}
+	
 }

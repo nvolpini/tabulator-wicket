@@ -5,7 +5,7 @@
         </encoder>
     </appender>
 
-    <logger name="wicket.tabulator" level="DEBUG"/>
+    <logger name="tabulator.wicket" level="DEBUG"/>
     <logger name="org.apache.wicket" level="INFO"/>
 
     <root level="WARN">

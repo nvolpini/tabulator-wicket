@@ -36,4 +36,12 @@ public class TabulatorUtils {
     	});
     }
     
+    public static TableFunction locale(String locale) {
+        return tableVar -> String.format("%s.setLocale(\"%s\")", tableVar, locale);
+    }
+
+    public static TableFunction setSort(String field, String dir) {
+        return tableVar -> String.format("%s.setSort(\"%s\", \"%s\")", tableVar, field, dir);
+    }
+    
 }

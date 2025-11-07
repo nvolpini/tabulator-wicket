@@ -16,6 +16,7 @@ import org.apache.wicket.model.util.MapModel;
 import tabulator.wicket.TableRowData;
 import tabulator.wicket.TabulatorBehavior;
 import tabulator.wicket.TabulatorTemplateInitializerModel;
+import tabulator.wicket.TabulatorUtils;
 import tabulator.wicket.behavior.SelectionSubmitBehavior;
 import tabulator.wicket.events.DataLoadedEvent;
 import tabulator.wicket.events.RowClickEvent;
@@ -46,6 +47,9 @@ public class DemoHomePage extends WebPage {
 
 		behavior.options().addColumnDefault("headerSort", true);
 		behavior.options().addColumnDefault("tooltip", true);
+		
+		behavior.addRunOnTableBuilt(TabulatorUtils.setSort("nome", "asc"));
+
 		
 		//behavior.theme(TabulatorTheme.MIDNIGHT);
 		

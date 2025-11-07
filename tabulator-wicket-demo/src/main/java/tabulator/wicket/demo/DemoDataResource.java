@@ -1,6 +1,7 @@
 package tabulator.wicket.demo;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ public class DemoDataResource extends AbstractResource {
                     List<Map<String, Object>> data = generateData();
                     String json = mapper.writeValueAsString(data);
                     attributes.getResponse().write(json);
+                    //Thread.sleep(Duration.ofSeconds(3));//delay
                 } catch (Exception e) {
                     attributes.getResponse().write("{\"error\":\"" + e.getMessage() + "\"}");
                 }
@@ -47,7 +49,7 @@ public class DemoDataResource extends AbstractResource {
         List<Map<String, Object>> list = new ArrayList<>();
         Random rnd = new Random();
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 30; i++) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", i);
             row.put("nome", "Produto " + i);

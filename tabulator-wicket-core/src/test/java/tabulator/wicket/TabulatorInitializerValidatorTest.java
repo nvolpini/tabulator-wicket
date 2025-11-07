@@ -1,8 +1,8 @@
 package tabulator.wicket;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,20 +37,19 @@ public class TabulatorInitializerValidatorTest extends AbstractWicketTest {
 
     @Test
     void testValidTemplateIsParsed() {
-        //ITabulatorInitializer init = new TabulatorStringInitializer(rawTemplate);
         var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
-
         ObjectNode node = validator.extractAndParseFromRenderedString(rawTemplate);
+
         assertTrue(node.has("columns"));
         assertTrue(node.get("pagination").asBoolean());
+        assertTrue(node.get("columnDefaults").has("headerSort"));
     }
 
     @Test
     void testInvalidTemplateLenientDoesNotThrow() {
-        //ITabulatorInitializer init = new TabulatorStringInitializer("const t = new Tabulator('#id',{ invalid, });");
         var validator = new TabulatorInitializerValidator(ValidationMode.LENIENT);
 
-        assertDoesNotThrow(() -> validator.extractAndParseFromRenderedString(rawTemplate));
+        assertDoesNotThrow(() -> validator.extractAndParseFromRenderedString("const t = new Tabulator('#id',{ invalid, });"));
     }
 
     @Test
@@ -62,43 +61,57 @@ public class TabulatorInitializerValidatorTest extends AbstractWicketTest {
             () -> validator.extractAndParseFromRenderedString("const t = new Tabulator('#id',{ invalid, });"));
     }
     
-    @Test
-    void testBehaviorGeneratesMergedScript() {
-        ITabulatorInitializer init = new TabulatorStringInitializer(rawTemplate);
 
-        TabulatorBehavior behavior = new TabulatorBehavior(init);
-        behavior
-            .options()
-                .set("paginationSize", 50)
-                .set("locale", true)
-                .addColumnDefault("hozAlign", "center");
-
-        ObjectNode finalOpts = behavior.getFinalOptions();
-
-        assertEquals(true, finalOpts.get("locale").asBoolean());
-        assertEquals(50, finalOpts.get("paginationSize").asInt());
-        assertEquals("\"center\"", finalOpts.get("columnDefaults").get("hozAlign").toString());
-    }
-    
     @Test
     void testTemplateVariableIsInterpolatedAndMerged() {
-        
-        ITabulatorInitializer init = new TabulatorTemplateInitializerModel(TabulatorInitializerValidatorTest.class
-        		, "table-template.js", new MapModel<>(Map.of("url", "/api/test")));
+        ITabulatorInitializer init = new TabulatorTemplateInitializerModel(
+            TabulatorInitializerValidatorTest.class,
+            "table-template.js",
+            new MapModel<>(Map.of("url", "/api/test"))
+        );
 
         TabulatorBehavior behavior = new TabulatorBehavior(init);
         behavior.options().addColumnDefault("headerSort", true);
-        
+
         var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
 
         // Simula bind+renderHead: obtém renderedTemplate, extract, merge, finalScript
         String rendered = init.generateScript(dummy, "table1");
         ObjectNode templateOpts = validator.extractAndParseFromRenderedString(rendered);
         ObjectNode merged = behavior.mergeOptions(templateOpts, behavior.getFinalOptions());
-        String finalScript = behavior.replaceTabulatorOptions(rendered, merged.toPrettyString());
+        String mergedJson = merged.toPrettyString();
+        String finalScript = behavior.replaceTabulatorOptions(rendered, mergedJson);
 
         assertFalse(finalScript.contains("__url__"));
-        assertTrue(finalScript.contains("/api/test")); // valor interpolado
-        assertTrue(finalScript.contains("\"headerSort\"")); // vindo do merged columnDefaults
+        assertTrue(finalScript.contains("/api/test")); // variável resolvida
+        assertTrue(finalScript.contains("\"headerSort\"")); // merge aplicado
     }
+    @Test
+    void testFunctionIsHandledAndRestored() {
+        var validator = new TabulatorInitializerValidator(ValidationMode.STRICT);
+
+        // Faz o parse (as funções serão substituídas por placeholders internamente)
+        ObjectNode node = validator.extractAndParseFromRenderedString(rawTemplate);
+
+        // o parse deve funcionar mesmo com funções JS
+        assertNotNull(node);
+        assertTrue(node.has("columns"), "O objeto parseado deve conter 'columns'");
+
+        // Gera JSON de volta e restaura as funções
+        String mergedJson = node.toPrettyString();
+        String restored = validator.restoreFunctions(mergedJson);
+
+        // --- Asserts principais ---
+        assertTrue(restored.contains("function(cell, formatterParams, onRender)"),
+                "A função original deve ter sido restaurada no script final");
+
+        assertTrue(restored.contains("(cell) =>"),
+                "A função arrow deve ter sido restaurada no script final");
+        
+        assertTrue(restored.contains("return value.substring"),
+                "O corpo da função deve ter sido preservado");
+        assertFalse(restored.contains("__FUNC_"),
+                "Nenhum placeholder de função deve restar no resultado final");
+    }
+
 }
