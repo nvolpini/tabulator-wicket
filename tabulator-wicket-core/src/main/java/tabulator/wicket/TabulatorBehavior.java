@@ -364,6 +364,11 @@ public class TabulatorBehavior extends Behavior {
     	
     }
 
+    public void runOnTable(AjaxRequestTarget target, TableFunction function) {
+    	
+    	TabulatorUtils.runOnTable(target, boundComponent, function);
+    	
+    }
     public void runOnTable(AjaxRequestTarget target, String js) {
     	
     	TabulatorUtils.runOnTable(target, boundComponent, (tableVar) -> String.format("%s.%s", tableVar, js));

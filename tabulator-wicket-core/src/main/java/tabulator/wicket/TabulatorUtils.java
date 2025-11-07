@@ -35,7 +35,11 @@ public class TabulatorUtils {
     	    }
     	});
     }
-    
+
+	public static TableFunction runOnTable(String function) {
+		return tableVar -> String.format("%s.%s", tableVar, function);
+    }
+	
     public static TableFunction locale(String locale) {
         return tableVar -> String.format("%s.setLocale(\"%s\")", tableVar, locale);
     }
