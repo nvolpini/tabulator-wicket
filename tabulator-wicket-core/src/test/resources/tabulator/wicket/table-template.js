@@ -1,3 +1,18 @@
+function testFunctionPre() {
+	
+}
+
+var statusContextMenu = [
+    {
+        label:"<i class='fa fa-check text-success'></i> Selecionar",
+        action:function(e, cell){
+            const row = cell.getRow();
+            const data = row.getData();
+            
+        }
+    },
+];
+
 const __tableVarName__ = new Tabulator("#__markupId__", {
 	layout: "fitColumns",
 	selectableRows: true,
@@ -13,7 +28,9 @@ const __tableVarName__ = new Tabulator("#__markupId__", {
 		{title: "Nome", field: "nome"
 			,formatter: (cell) => {
 			  return cell.getValue() + "!";
-			}
+			}, 
+			contextMenu: statusContextMenu
+
 		},
 		{title: "Descr", field: "text"
 		, formatter: function(cell, formatterParams, onRender){
@@ -31,3 +48,7 @@ const __tableVarName__ = new Tabulator("#__markupId__", {
 	],
 	// comentário permitido
 });
+
+function testFunctionPos() {
+	
+}

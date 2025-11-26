@@ -161,11 +161,15 @@ public class TabulatorBehavior extends Behavior {
         // Renders the template - resolve as variáveis
         String renderedTemplate = initializer.generateScript(c, getTableVarName());
 
-
         var validator = new TabulatorInitializerValidator(validationMode);
+
+        TabulatorTemplateParts parts = validator.extractTemplateParts(renderedTemplate);
+        
+        ObjectNode templateOptions = validator.parseJsonObject(parts.jsonObject());
+
         
         // Extract json options from the parsed template
-        ObjectNode templateOptions = validator.extractAndParseFromRenderedString(renderedTemplate);
+        //ObjectNode templateOptions = validator.extractAndParseFromRenderedString(renderedTemplate);
 
         
         //ObjectNode templateOptions = validator.validateAndExtract(c, initializer);
@@ -176,10 +180,17 @@ public class TabulatorBehavior extends Behavior {
 
         // Serializa e restaura as funções JS
         String mergedJson = merged.toPrettyString();
+        
+        mergedJson = validator.restoreSymbols(mergedJson);
+        
         mergedJson = validator.restoreFunctions(mergedJson);
         
-        String finalScript = replaceTabulatorOptions(renderedTemplate, mergedJson);
-
+        //String finalScript = replaceTabulatorOptions(renderedTemplate, mergedJson);
+        String finalScript =
+                parts.preamble()
+                + mergedJson
+                + parts.postamble();
+        
         StringBuilder sb = new StringBuilder(finalScript);
         
         // add the events

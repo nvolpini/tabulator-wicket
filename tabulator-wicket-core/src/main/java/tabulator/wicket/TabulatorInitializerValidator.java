@@ -2,6 +2,8 @@ package tabulator.wicket;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.hjson.JsonValue;
 import org.hjson.Stringify;
@@ -11,86 +13,78 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-/**
- * Validator/Extractor para os templates Tabulator com suporte a funções JS.
- *
- * Fluxo:
- * 1) Recebe o template já interpolado (initializer.generateScript(...))
- * 2) Substitui funções JS por placeholders ("__FUNC_n__")
- * 3) Usa json5-java para parsear o conteúdo em JSON válido
- * 4) Retorna um ObjectNode (Jackson)
- * 5) restoreFunctions() recoloca as funções originais no script final
- */
 public class TabulatorInitializerValidator {
 
     private static final Logger log = LoggerFactory.getLogger(TabulatorInitializerValidator.class);
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public enum ValidationMode {
-        STRICT,   // lança exception em caso de erro
-        LENIENT   // apenas loga e retorna vazio
-    }
+    public enum ValidationMode { STRICT, LENIENT }
 
     private final ValidationMode mode;
 
-    // Armazena funções JS substituídas por placeholders
     private final Map<String, String> functionsMap = new LinkedHashMap<>();
     private int funcCounter = 0;
 
+    private final Map<String, String> symbolsMap = new LinkedHashMap<>();
+    private int symbolCounter = 0;
+    
     public TabulatorInitializerValidator(ValidationMode mode) {
         this.mode = mode;
     }
 
-    /**
-     * Extrai o objeto JS principal do template (primeiro '{' balanceado),
-     * substitui funções e faz o parse via JSON5.
-     */
-    public ObjectNode extractAndParseFromRenderedString(String rendered) {
+    // ------------------------------------------------------------
+    // 1) Novo extrator completo: preamble + jsonObject + postamble
+    // ------------------------------------------------------------
+    public TabulatorTemplateParts extractTemplateParts(String rendered) {
+
+        int tabPos = rendered.indexOf("new Tabulator");
+        if (tabPos < 0) {
+            // fallback – não encontrou Tabulator; trata tudo como preamble
+            return new TabulatorTemplateParts(rendered, "{}", "");
+        }
+
+        // acha o primeiro '{' após "new Tabulator("
+        int parenOpen = rendered.indexOf('(', tabPos);
+        int braceOpen = rendered.indexOf('{', parenOpen);
+
+        if (braceOpen < 0) {
+            // sem objeto — devolve tudo como preamble
+            return new TabulatorTemplateParts(rendered, "{}", "");
+        }
+
+        int braceClose = findMatchingBrace(rendered, braceOpen);
+        if (braceClose < 0) {
+            if (mode == ValidationMode.STRICT) {
+                throw new TabulatorWicketException("Chaves não balanceadas no template Tabulator.");
+            }
+            log.warn("Chaves não balanceadas.");
+            return new TabulatorTemplateParts(rendered, "{}", "");
+        }
+
+        String preamble  = rendered.substring(0, braceOpen);
+        String json      = rendered.substring(braceOpen, braceClose + 1);
+        String postamble = rendered.substring(braceClose + 1);
+
+        return new TabulatorTemplateParts(preamble, json, postamble);
+    }
+
+    // --------------------------------------------------------------------
+    // 2) Parseia APENAS o jsonObject do Tabulator (extraído acima)
+    // --------------------------------------------------------------------
+    public ObjectNode parseJsonObject(String jsObjectRaw) {
+
         functionsMap.clear();
         funcCounter = 0;
 
-     // Extrai o objeto de opções após "new Tabulator("
-        int open = -1;
-        int close = -1;
-        int tabulatorPos = rendered.indexOf("new Tabulator");
-
-        if (tabulatorPos >= 0) {
-            // procura o primeiro '{' depois do parêntese de abertura do Tabulator
-            int parenOpen = rendered.indexOf('(', tabulatorPos);
-            int parenClose = rendered.indexOf(')', parenOpen + 1);
-            open = rendered.indexOf('{', parenOpen);
-        } else {
-            // fallback: primeiro '{' global
-            open = rendered.indexOf('{');
-        }
-
-        if (open >= 0) {
-            close = findMatchingBrace(rendered, open);
-        }
-
-        if (open < 0 || close < 0) {
-            if (mode == ValidationMode.STRICT)
-                throw new TabulatorWicketException("Não foi possível encontrar o objeto de opções no template Tabulator.");
-            log.error("Falha ao localizar objeto { ... } no template Tabulator.");
-            return mapper.createObjectNode();
-        }
-
-        String jsObject = rendered.substring(open, close + 1).trim();
+        symbolsMap.clear();
+        symbolCounter = 0;
         
-        //log.debug("Extracted JS object snippet:\n{}",jsObject);
+        String withPlaceholders = replaceFunctionsWithPlaceholders(jsObjectRaw);
+        String withSymbols = replaceJsSymbols(withPlaceholders);
 
-        // Substitui funções JS por placeholders
-        String withPlaceholders = replaceFunctionsWithPlaceholders(jsObject);
 
         try {
-        	
-            String jsonText = JsonValue.readHjson(withPlaceholders).toString(Stringify.PLAIN);
-
-
-            //log.debug("Replaced JS object snippet:\n{}", jsonText);
-
-
-            // Converte para ObjectNode (Jackson)
+            String jsonText = JsonValue.readHjson(withSymbols).toString(Stringify.PLAIN);
             return (ObjectNode) mapper.readTree(jsonText);
 
         } catch (Exception e) {
@@ -102,22 +96,45 @@ public class TabulatorInitializerValidator {
         }
     }
 
-    /**
-     * Substitui funções JS (function/arrow) por placeholders "__FUNC_n__" entre aspas.
-     */
+    // --------------------------------------------------------------------
+    // 3) Método antigo, agora compatível (mas usa o novo extrator)
+    // --------------------------------------------------------------------
+    public ObjectNode extractAndParseFromRenderedString(String rendered) {
+        TabulatorTemplateParts parts = extractTemplateParts(rendered);
+        return parseJsonObject(parts.jsonObject());
+    }
+
+    // --------------------------------------------------------------------
+    // 4) Função de restauração
+    // --------------------------------------------------------------------
+    public String restoreFunctions(String jsonWithPlaceholders) {
+        String out = jsonWithPlaceholders;
+        for (var e : functionsMap.entrySet()) {
+            out = out.replace(e.getKey(), e.getValue());
+            // tentar sem aspas também
+            String bare = e.getKey().replace("\"", "");
+            out = out.replace(bare, e.getValue());
+        }
+        return out;
+    }
+
+    // --------------------------------------------------------------------
+    // 5) Localizador e substituidor de funções JS
+    // --------------------------------------------------------------------
     private String replaceFunctionsWithPlaceholders(String text) {
         StringBuilder sb = new StringBuilder();
-        int idx = 0, len = text.length();
+        int idx = 0;
+        int len = text.length();
 
         while (idx < len) {
             int funcPos = indexOfIgnoringStrings(text, "function", idx);
             int arrowPos = indexOfIgnoringStrings(text, "=>", idx);
+
             int found = -1;
             boolean isArrow = false;
 
             if (funcPos >= 0 && (arrowPos < 0 || funcPos < arrowPos)) {
                 found = funcPos;
-                isArrow = false;
             } else if (arrowPos >= 0) {
                 found = arrowPos;
                 isArrow = true;
@@ -129,39 +146,23 @@ public class TabulatorInitializerValidator {
             }
 
             if (!isArrow) {
-                // normal function: copy until 'function' and parse from there
+                // normal function(...)
                 sb.append(text, idx, found);
                 int braceOpen = text.indexOf('{', found);
-                if (braceOpen < 0) {
-                    sb.append(text.substring(found));
-                    break;
-                }
                 int braceClose = findMatchingBrace(text, braceOpen);
-                if (braceClose < 0) {
-                    sb.append(text.substring(found));
-                    break;
-                }
                 String funcText = text.substring(found, braceClose + 1);
                 String placeholder = "\"" + nextFuncPlaceholder() + "\"";
                 functionsMap.put(placeholder, funcText);
                 sb.append(placeholder);
                 idx = braceClose + 1;
             } else {
-                // arrow function: retrocede para o começo do valor e substitui tudo
+                // arrow function
                 int funcStart = backtrackToValueStart(text, found);
-                // copia tudo até funcStart (isso evita deixar "(cell) " sobrando)
                 sb.append(text, idx, funcStart);
+
                 int braceOpen = text.indexOf('{', found);
-                if (braceOpen < 0) {
-                    // fallback se não achar '{'
-                    sb.append(text.substring(funcStart));
-                    break;
-                }
                 int braceClose = findMatchingBrace(text, braceOpen);
-                if (braceClose < 0) {
-                    sb.append(text.substring(funcStart));
-                    break;
-                }
+
                 String funcText = text.substring(funcStart, braceClose + 1);
                 String placeholder = "\"" + nextFuncPlaceholder() + "\"";
                 functionsMap.put(placeholder, funcText);
@@ -169,103 +170,147 @@ public class TabulatorInitializerValidator {
                 idx = braceClose + 1;
             }
         }
-
         return sb.toString();
     }
-    /**
-     * Retrocede do índice 'pos' (onde encontra '=>') até o início da expressão de valor.
-     * Tenta encontrar ':' antes; se achar, retorna char logo após ':'.
-     * Senão, retrocede até começo do token/expressão.
-     */
-    private int backtrackToValueStart(String text, int pos) {
-        // procura ':' antes do pos (ignora strings)
-        int colon = findPreviousColon(text, pos - 1);
-        if (colon >= 0) {
-            int start = colon + 1;
-            while (start < pos && Character.isWhitespace(text.charAt(start))) start++;
-            return start;
+    
+    public String restoreSymbols(String json) {
+        String result = json;
+        for (Map.Entry<String, String> e : symbolsMap.entrySet()) {
+            String quotedPlaceholder = e.getKey(); // ex: "__SYMBOL_1__" mas com aspas
+            String symbol = e.getValue();         // ex: statusContextMenu
+            // substitui o placeholder (incl. aspas) pelo símbolo cru
+            result = result.replace(quotedPlaceholder, symbol);
         }
-        // sem colon: volta até primeiro caractere não space
+        return result;
+    }
+
+
+    /**
+     * Substitui valores que são identificadores JS puros (ex: statusContextMenu)
+     * por placeholders entre aspas "__SYMBOL_n__" para que Jackson/HJSON não os transforme em strings.
+     *
+     * Observação: recebe o texto já com funções substituídas (placeholders) para evitar confundir
+     * arrow functions e parâmetros.
+     */
+    private String replaceJsSymbols(String text) {
+        // Regex: captura um identificador que aparece como value após ':' e antes de ',', '}' ou ']'
+        // (?<=:\s*)  -> assertiva lookbehind: estamos logo após ':'
+        // ([A-Za-z_$][A-Za-z0-9_$]*) -> captura identificador JS válido
+        // (?=\s*[,}\]]) -> assertiva lookahead: seguido por vírgula, } ou ]
+        Pattern p = Pattern.compile("(?<=:\\s*)([A-Za-z_$][A-Za-z0-9_$]*)(?=\\s*[,}\\]])");
+        Matcher m = p.matcher(text);
+        StringBuffer sb = new StringBuffer();
+
+        while (m.find()) {
+            String symbol = m.group(1);
+
+            // ignore boolean/null/number-like keywords (só por segurança)
+            if ("true".equals(symbol) || "false".equals(symbol) || "null".equals(symbol)) {
+                continue;
+            }
+
+            // cria placeholder e armazena
+            String placeholder = "\"__SYMBOL_" + (++symbolCounter) + "__\"";
+            symbolsMap.put(placeholder, symbol);
+
+            // substitui o token encontrado pelo placeholder (mantendo espaços e pontuação)
+            m.appendReplacement(sb, Matcher.quoteReplacement(placeholder));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    
+    private int backtrackToValueStart(String text, int pos) {
+        int c = findPreviousColon(text, pos - 1);
+        if (c >= 0) {
+            int i = c + 1;
+            while (i < pos && Character.isWhitespace(text.charAt(i))) i++;
+            return i;
+        }
         int i = pos;
         while (i > 0 && Character.isWhitespace(text.charAt(i - 1))) i--;
-        // tenta retroceder até começo do token (identificador ou parêntese)
-        while (i > 0 && (Character.isJavaIdentifierPart(text.charAt(i - 1)) || text.charAt(i - 1) == '(' || text.charAt(i - 1) == ')')) {
+        while (i > 0 && (Character.isJavaIdentifierPart(text.charAt(i - 1)) 
+                || text.charAt(i - 1) == '(' || text.charAt(i - 1) == ')'))
             i--;
-        }
         return i;
     }
 
     private int findPreviousColon(String text, int from) {
-        boolean inSingle = false, inDouble = false;
+        boolean inS = false, inD = false;
         for (int i = from; i >= 0; i--) {
             char c = text.charAt(i);
-            if (c == '"' && !inSingle) inDouble = !inDouble;
-            else if (c == '\'' && !inDouble) inSingle = !inSingle;
-            else if (!inSingle && !inDouble && c == ':') return i;
-            else if (c == '\\') i--; // skip escaped
+            if (c == '"' && !inS) inD = !inD;
+            else if (c == '\'' && !inD) inS = !inS;
+            else if (!inS && !inD && c == ':') return i;
         }
         return -1;
     }
 
-
-    private String nextFuncPlaceholder() {
-        funcCounter++;
-        return "__FUNC_" + funcCounter + "__";
-    }
-
-    /**
-     * Busca índice de token ignorando trechos dentro de aspas simples/dobradas.
-     */
     private int indexOfIgnoringStrings(String text, String token, int from) {
-        boolean inSingle = false, inDouble = false;
+        boolean inS = false, inD = false;
         for (int i = from; i <= text.length() - token.length(); i++) {
             char c = text.charAt(i);
-            if (c == '"' && !inSingle) inDouble = !inDouble;
-            else if (c == '\'' && !inDouble) inSingle = !inSingle;
-            else if (!inSingle && !inDouble && text.startsWith(token, i))
-                return i;
-            if (c == '\\') i++;
+            if (c == '"' && !inS) inD = !inD;
+            else if (c == '\'' && !inD) inS = !inS;
+            else if (!inS && !inD && text.startsWith(token, i)) return i;
         }
         return -1;
     }
 
-    /**
-     * Localiza o '}' correspondente ao '{' inicial, ignorando strings e escapes.
-     */
     private int findMatchingBrace(String text, int startIndex) {
         int depth = 0;
-        boolean inSingle = false, inDouble = false;
+        boolean inS = false, inD = false;
 
         for (int i = startIndex; i < text.length(); i++) {
             char c = text.charAt(i);
-            if (c == '"' && !inSingle) inDouble = !inDouble;
-            else if (c == '\'' && !inDouble) inSingle = !inSingle;
-            else if (!inSingle && !inDouble) {
+            if (c == '"' && !inS) inD = !inD;
+            else if (c == '\'' && !inD) inS = !inS;
+            else if (!inS && !inD) {
                 if (c == '{') depth++;
                 else if (c == '}') {
                     depth--;
                     if (depth == 0) return i;
                 }
             }
-            if (c == '\\') i++;
+        }
+        return -1;
+    }
+    
+    /**
+     * Encontra o próximo ':' no texto começando de 'start', ignorando ':' que estejam dentro de
+     * strings (aspas simples ou duplas) e ignorando escapes.
+     *
+     * @param text  texto a ser examinado
+     * @param start índice inicial da busca
+     * @return índice do ':' válido ou -1 se não houver
+     */
+    private int findNextColon(String text, int start) {
+        boolean inSingle = false;
+        boolean inDouble = false;
+        for (int i = start; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '"' && !inSingle) {
+                inDouble = !inDouble;
+                continue;
+            }
+            if (c == '\'' && !inDouble) {
+                inSingle = !inSingle;
+                continue;
+            }
+            if (!inSingle && !inDouble && c == ':') {
+                return i;
+            }
+            if (c == '\\') {
+                // pula o próximo char (escape)
+                i++;
+            }
         }
         return -1;
     }
 
-    /**
-     * Restaura funções originais (sem aspas) nos lugares dos placeholders.
-     */
-    public String restoreFunctions(String jsonWithPlaceholders) {
-        String result = jsonWithPlaceholders;
-        for (Map.Entry<String, String> e : functionsMap.entrySet()) {
-            String quoted = e.getKey();
-            String funcText = e.getValue();
-            result = result.replace(quoted, funcText);
-            if (quoted.startsWith("\"") && quoted.endsWith("\"")) {
-                String bare = quoted.substring(1, quoted.length() - 1);
-                result = result.replace(bare, funcText);
-            }
-        }
-        return result;
+    private String nextFuncPlaceholder() {
+        funcCounter++;
+        return "__FUNC_" + funcCounter + "__";
     }
 }
