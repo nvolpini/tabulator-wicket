@@ -55,7 +55,10 @@ public class TabulatorBehavior extends Behavior {
     private final List<TableFunction> runOnInitFunctions = new ArrayList<>();
 
     private final List<TableFunction> runOnTableBuiltFunctions = new ArrayList<>();
+    
+    private final List<TableFunction> runOnDataLoadedFunctions = new ArrayList<>();
 
+    private final List<TableFunction> runOnDataProcessedFunctions = new ArrayList<>();
     
     public TabulatorBehavior(ITabulatorInitializer initializer) {
         this.initializer = Objects.requireNonNull(initializer);
@@ -221,7 +224,26 @@ public class TabulatorBehavior extends Behavior {
 		    }
 		    sb.append("});\n");
 		}
-        
+
+		if (!runOnDataLoadedFunctions.isEmpty()) {
+			sb.append(tableVar);
+			sb.append(".on('dataLoaded', function(data) {\n");
+		    for (TableFunction fn : runOnDataLoadedFunctions) {
+		        sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+		    }
+		    sb.append("});\n");
+		}
+
+		if (!runOnDataProcessedFunctions.isEmpty()) {
+			sb.append(tableVar);
+			sb.append(".on('dataProcessed', function() {\n");
+		    for (TableFunction fn : runOnDataProcessedFunctions) {
+		        sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+		    }
+		    sb.append("});\n");
+		}
+		
+		
 		for (TableFunction fn : runOnInitFunctions) {
 			sb.append(fn.getFunctionBody(tableVar));
 			sb.append("\n");
@@ -430,5 +452,15 @@ public class TabulatorBehavior extends Behavior {
 	    runOnTableBuiltFunctions.add(fn);
 	    return this;
 	}
-	
+
+
+	public TabulatorBehavior addRunOnDataLoaded(TableFunction fn) {
+	    runOnDataLoadedFunctions.add(fn);
+	    return this;
+	}
+
+	public TabulatorBehavior addRunOnDataProcessed(TableFunction fn) {
+	    runOnDataProcessedFunctions.add(fn);
+	    return this;
+	}
 }
