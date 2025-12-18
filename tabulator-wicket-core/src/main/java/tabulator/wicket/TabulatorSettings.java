@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,11 +64,14 @@ public class TabulatorSettings implements ITabulatorSettings {
 
     @Override
     public Optional<JsonNode> getTranslation(String locale) {
-        if (translations.containsKey(locale)) {
-            return Optional.of(translations.get(locale));
+    	
+    	final String localeSearch = StringUtils.lowerCase(locale);
+    	
+        if (translations.containsKey(localeSearch)) {
+            return Optional.of(translations.get(localeSearch));
         }
 
-        String file = "tabulator/wicket/lang/" + locale + ".json";
+        String file = "tabulator/wicket/lang/" + localeSearch + ".json";
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(file)) {
             if (in == null) {
                 log.warn("Translation not found: {}", file);
@@ -75,19 +79,20 @@ public class TabulatorSettings implements ITabulatorSettings {
             }
             JsonNode json = mapper.readTree(in);
             ObjectNode wrapped = mapper.createObjectNode();
-            wrapped.set(locale, json);
-            translations.put(locale, wrapped);
-            log.debug("Loaded translation for locale: {}", locale);
+            wrapped.set(localeSearch, json);
+            translations.put(localeSearch, wrapped);
+            log.debug("Loaded translation for locale: {}", localeSearch);
             return Optional.of(wrapped);
         } catch (IOException e) {
-            log.error("Error loading translation {}", locale, e);
+            log.error("Error loading translation {}", localeSearch, e);
             return Optional.empty();
         }
     }
 
     @Override
     public void registerTranslation(String locale, JsonNode json) {
-        translations.put(locale, json);
+    	final String localeSearch = StringUtils.lowerCase(locale);
+        translations.put(localeSearch, json);
     }
 
     @Override
