@@ -47,5 +47,17 @@ public class TabulatorUtils {
     public static TableFunction setSort(String field, String dir) {
         return tableVar -> String.format("%s.setSort(\"%s\", \"%s\")", tableVar, field, dir);
     }
-    
+
+    public static TableFunction clearSetFilters() {
+        return tableVar -> String.format("%s.clearFilter()", tableVar);
+    }
+
+    public static TableFunction clearHeaderFilters() {
+        return tableVar -> String.format("%s.clearHeaderFilter()", tableVar);
+    }
+
+    public static TableFunction clearFilters(boolean clearHeaderFiltersToo) {
+        return tableVar -> String.format("%s.clearFilter(%s)", tableVar, clearHeaderFiltersToo);
+    }
+
 }
