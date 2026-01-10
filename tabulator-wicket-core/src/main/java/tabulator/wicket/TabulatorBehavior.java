@@ -152,7 +152,7 @@ public class TabulatorBehavior extends Behavior {
     }
     
     @Override
-    public final void renderHead(Component c, IHeaderResponse r){
+    public final void renderHead(Component c, IHeaderResponse r) {
     	
         log.debug("RenderHead for component: {}", c.getMarkupId());
 
@@ -369,8 +369,14 @@ public class TabulatorBehavior extends Behavior {
 		  r.render(CssHeaderItem.forReference(TabulatorCssReference.getWebjars()));
 	      r.render(JavaScriptHeaderItem.forReference(TabulatorJsReference.getWebjars()));
 	**/
+        
+        onRenderHeadResources(c, r);
     }
 
+    protected void onRenderHeadResources(Component c, IHeaderResponse r) {
+    	
+    }
+    
     public final String getTableVarName() {
     	return tableVarName;
     }
