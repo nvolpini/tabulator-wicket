@@ -60,4 +60,9 @@ public class TabulatorUtils {
         return tableVar -> String.format("%s.clearFilter(%s)", tableVar, clearHeaderFiltersToo);
     }
 
+    public static TableFunction setFilter(String field, String filterType, String filterValue) {
+        return tableVar -> String.format("%s.setFilter(\"%s\",\"%s\",%s)"
+        		, tableVar, field, filterType, filterValue != null ? "\""+filterValue+"\"" : "null");
+    }
+
 }

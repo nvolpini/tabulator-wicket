@@ -16,7 +16,6 @@ import org.apache.wicket.model.IDetachable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import tabulator.wicket.behavior.AbstractTabulatorAjaxBehavior;
@@ -61,8 +60,8 @@ public class TabulatorBehavior extends Behavior {
     private final List<TableFunction> runOnDataProcessedFunctions = new ArrayList<>();
     
     public TabulatorBehavior(ITabulatorInitializer initializer) {
-        this.initializer = Objects.requireNonNull(initializer);
-
+        //this.initializer = Objects.requireNonNull(initializer);
+    	this.initializer = initializer;
     }
 
     public TabulatorBehavior add(AbstractTabulatorAjaxBehavior event) {
@@ -145,7 +144,7 @@ public class TabulatorBehavior extends Behavior {
     public void detach(Component component) {
     	super.detach(component);
     	
-    	if (initializer instanceof IDetachable) {
+    	if (initializer != null && initializer instanceof IDetachable) {
     		((IDetachable) initializer).detach();
     	}
     	
@@ -153,6 +152,97 @@ public class TabulatorBehavior extends Behavior {
     
     @Override
     public final void renderHead(Component c, IHeaderResponse r) {
+
+        log.debug("RenderHead for component: {}", c.getMarkupId());
+
+        prepareFinalOptions();
+
+        String tableScript = buildTableInitializationScript(c);
+
+        StringBuilder sb = new StringBuilder(tableScript);
+
+        appendAjaxEventScripts(sb);
+        appendLifecycleHooks(sb);
+
+        r.render(OnDomReadyHeaderItem.forScript(sb.toString()));
+
+        renderHeadResources(c, r);
+
+        onRenderHead(c, r);
+    }
+
+    protected String buildTableInitializationScript(Component c) {
+
+        String tableVar = getTableVarName();
+
+        String renderedTemplate = initializer.generateScript(c, tableVar);
+
+        var validator = new TabulatorInitializerValidator(validationMode);
+
+        TabulatorTemplateParts parts = validator.extractTemplateParts(renderedTemplate);
+
+        ObjectNode templateOptions = validator.parseJsonObject(parts.jsonObject());
+
+        ObjectNode merged = mergeOptions(templateOptions, getFinalOptions());
+
+        String mergedJson = merged.toPrettyString();
+        mergedJson = validator.restoreSymbols(mergedJson);
+        mergedJson = validator.restoreFunctions(mergedJson);
+
+        return parts.preamble()
+                + mergedJson
+                + parts.postamble();
+    }
+    
+    protected void appendLifecycleHooks(StringBuilder sb) {
+
+        String tableVar = getTableVarName();
+
+        if (!runOnTableBuiltFunctions.isEmpty()) {
+            sb.append(tableVar)
+              .append(".on('tableBuilt', function() {\n");
+            for (TableFunction fn : runOnTableBuiltFunctions) {
+                sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+            }
+            sb.append("});\n");
+        }
+
+        if (!runOnDataLoadedFunctions.isEmpty()) {
+            sb.append(tableVar)
+              .append(".on('dataLoaded', function(data) {\n");
+            for (TableFunction fn : runOnDataLoadedFunctions) {
+                sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+            }
+            sb.append("});\n");
+        }
+
+        if (!runOnDataProcessedFunctions.isEmpty()) {
+            sb.append(tableVar)
+              .append(".on('dataProcessed', function() {\n");
+            for (TableFunction fn : runOnDataProcessedFunctions) {
+                sb.append("    ").append(fn.getFunctionBody(tableVar)).append(";\n");
+            }
+            sb.append("});\n");
+        }
+
+        for (TableFunction fn : runOnInitFunctions) {
+            sb.append(fn.getFunctionBody(tableVar)).append("\n");
+        }
+    }
+    
+    protected void appendAjaxEventScripts(StringBuilder sb) {
+
+        String tableVar = getTableVarName();
+
+        for (AbstractTabulatorAjaxBehavior ev : behaviors) {
+            sb.append(ev.createEventScript(tableVar));
+            sb.append("\n");
+        }
+    }
+
+
+    //@Override
+    public final void renderHeadOld(Component c, IHeaderResponse r) {
     	
         log.debug("RenderHead for component: {}", c.getMarkupId());
 
