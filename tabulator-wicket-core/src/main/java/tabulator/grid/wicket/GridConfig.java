@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public class GridConfig implements Serializable {
 
@@ -62,5 +63,83 @@ public class GridConfig implements Serializable {
     public static List<Object> list(Object... values) {
         return Arrays.asList(values);
     }
+    
+    public GridConfig index(String field) {
+        options.put("index", field);
+        return this;
+    }
+    
+    public GridConfig clearInitialSort() {
+        options.remove("initialSort");
+        return this;
+    }
+    
+    public GridConfig initialSort(String column, SortDir dir) {
 
+        List<Map<String,Object>> list =
+                (List<Map<String,Object>>) options.computeIfAbsent(
+                        "initialSort",
+                        k -> new ArrayList<>()
+                );
+
+        list.add(map(
+                "column", column,
+                "dir", dir.js()
+        ));
+
+        return this;
+    }
+    
+    public GridConfig columnDefaults(Consumer<ColumnDefaults> consumer) {
+
+        ColumnDefaults defaults = new ColumnDefaults();
+        consumer.accept(defaults);
+
+        options.put("columnDefaults", defaults.build());
+
+        return this;
+    }
+    public GridConfig rowFormatter(JsFunction fn) {
+        options.put("rowFormatter", fn);
+        return this;
+    }
+
+    public GridConfig ajaxResponse(JsFunction fn) {
+        options.put("ajaxResponse", fn);
+        return this;
+    }
+
+    public GridConfig ajaxRequestFunc(JsFunction fn) {
+        options.put("ajaxRequestFunc", fn);
+        return this;
+    }
+    
+    public static class ColumnDefaults implements Serializable {
+
+        private final Map<String,Object> values = new LinkedHashMap<>();
+
+        public ColumnDefaults headerSort(boolean value) {
+            values.put("headerSort", value);
+            return this;
+        }
+
+        public ColumnDefaults center() {
+            values.put("hozAlign", "center");
+            return this;
+        }
+
+        public ColumnDefaults left() {
+            values.put("hozAlign", "left");
+            return this;
+        }
+
+        public ColumnDefaults right() {
+            values.put("hozAlign", "right");
+            return this;
+        }
+
+        Map<String,Object> build() {
+            return values;
+        }
+    }
 }
