@@ -20,6 +20,11 @@ public class GridColumn {
 		return new GridColumn(title, field);
 	}
 
+	public GridColumn field(String field) {
+		data.put("field", field);
+		return this;
+	}
+	
 	public GridColumn headerTooltip(String tooltip) {
 		data.put("headerTooltip", tooltip);
 		return this;
@@ -30,11 +35,21 @@ public class GridColumn {
 		return this;
 	}
 
+	public GridColumn resizable(boolean v) {
+		data.put("resizable", v);
+		return this;
+	}
+
+	public GridColumn frozen(boolean v) {
+		data.put("frozen", v);
+		return this;
+	}
+	
 	public GridColumn visible(boolean v) {
 		data.put("visible", v);
 		return this;
 	}
-
+	
 	public GridColumn headerFilter(Object v) {
 		data.put("headerFilter", v);
 		return this;

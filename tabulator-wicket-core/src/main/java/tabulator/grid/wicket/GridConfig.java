@@ -52,6 +52,12 @@ public class GridConfig implements Serializable {
         return this;
     }
     
+    public GridConfig remove(String key) {
+        this.options.remove(key);
+        return this;
+    }
+    
+    
     public static Map<String,Object> map(Object... keyValues) {
         Map<String,Object> m = new LinkedHashMap<>();
         for (int i = 0; i < keyValues.length; i += 2) {
